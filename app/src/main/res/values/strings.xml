@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">EVS Diag V0.1</string>
+    <string name="title">V0.1 Diagnostic (Capture / Hash / PNG)</string>
+    <string name="process_name_hint">EVS process name</string>
+    <string name="default_process_name">android.hardware.automotive.evs@1.0-service</string>
+    <string name="width_hint">Width (default 1920)</string>
+    <string name="height_hint">Height (default 896)</string>
+    <string name="frame_count_hint">Frame count (default 10)</string>
+    <string name="interval_hint">Interval ms (default 500)</string>
+    <string name="default_width">1920</string>
+    <string name="default_height">896</string>
+    <string name="default_frame_count">10</string>
+    <string name="default_interval_ms">500</string>
+    <string name="run_button">Start Diagnostic</string>
+    <string name="preview_title">Captured PNG Preview</string>
+    <string name="prev_button">Prev</string>
+    <string name="next_button">Next</string>
+    <string name="preview_empty">No PNG loaded yet.</string>
+</resources>
