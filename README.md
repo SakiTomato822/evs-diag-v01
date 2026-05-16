@@ -1,48 +1,82 @@
 # EVS Diag V0.1
 
-目标：只做诊断闭环  
-`抓帧 -> SHA-256 hash -> UYVY 转 PNG -> 复现性判断`
+Root-only Android diagnostic app for validating EVS/AVM frame capture on automotive Android head units.
 
-## 当前实现
-- 读取目标进程（默认 `android.hardware.automotive.evs@1.0-service`）PID
-- 扫描 `/proc/<pid>/fd` 中的 `/dmabuf:*` FD
-- 用 `su -c dd if=/proc/<pid>/fd/<fd>` 抓取固定字节数 raw（默认 `1920x896x2`）
-- 每帧计算 SHA-256
-- 每帧转 PNG（按 YUYV/UYVY 逻辑）
-- 输出 `summary.txt`，包含 hash、nonZeroRatio、唯一 hash 数
-- App 内可直接预览本次会话 PNG（Prev/Next）
+## Repository Description
 
-## 输出目录
-- App 内输出：
-  - `Android/data/com.lynk.evsdiag/files/evs_diag_v01/<timestamp>/raw`
-  - `Android/data/com.lynk.evsdiag/files/evs_diag_v01/<timestamp>/png`
-  - `Android/data/com.lynk.evsdiag/files/evs_diag_v01/<timestamp>/summary.txt`
+EVS Diag V0.1 is a small Android diagnostic tool designed to test whether frames from an automotive EVS/AVM rendering path can be captured, hashed, converted to PNG, and reproduced consistently.
 
-## 上车使用建议
-1. 先打开 AVM 画面。  
-2. 启动 App，保持默认参数：
-   - process: `android.hardware.automotive.evs@1.0-service`
-   - width: `1920`
-   - height: `896`
-   - frameCount: `10`
-   - intervalMs: `500`
-3. 点“开始诊断”，等待日志显示完成。  
-4. 看 `unique hash`：
-   - `>1`：说明帧有变化，路线成立。
-   - `=1`：说明抓到的可能是静态/重复缓冲，需要拉长时长或制造明显运动。
+The current target environment is a rooted/userdebug Android-based head unit where the EVS HAL process exposes AVM-related DMA buffer file descriptors through `/proc/<pid>/fd`.
 
-## 电脑离线复核
-```powershell
-python .\tools\verify_uyvy_session.py "D:\path\to\session" --width 1920 --height 896 --png
+## Current Scope
+
+- Locate the EVS HAL process.
+- Detect `video*cif` usage from the target process.
+- Enumerate DMA buffer file descriptors owned by the EVS HAL process.
+- Capture a small number of raw frames from selected DMA buffer descriptors.
+- Compute SHA-256 hashes for captured frames.
+- Convert captured UYVY frames to PNG.
+- Preview captured PNG files inside the app.
+- Save raw frames, PNG previews, and a text summary for later inspection.
+
+## Non-Goals
+
+- This is not a DVR implementation.
+- This does not perform continuous video recording.
+- This does not replace or modify the factory EVS HAL.
+- This does not change system configuration.
+- This does not attempt to access raw multi-camera sensor streams.
+- This does not bypass Android security on production devices.
+
+## Default Capture Parameters
+
+- Target process: `android.hardware.automotive.evs@1.0-service`
+- Frame format: `UYVY`
+- Width: `1920`
+- Height: `896`
+- Frame count: `10`
+- Interval: `500 ms`
+
+## Output
+
+Each diagnostic session writes files under the app-specific external storage directory:
+
+```text
+Android/data/com.lynk.evsdiag/files/evs_diag_v01/<timestamp>/
 ```
 
-如果缺 Pillow：
-```powershell
-pip install pillow
+Session contents:
+
+```text
+raw/          Captured raw frame buffers
+png/          PNG previews converted from raw frames
+summary.txt   Capture metadata, hashes, and basic frame checks
 ```
 
-## 直接出 APK（GitHub 一键）
-1. 把本目录完整上传到你的 GitHub 仓库。  
-2. 打开 `Actions` -> `Build Debug APK` -> `Run workflow`。  
-3. 构建完成后下载 Artifact：`evs-diag-v01-debug-apk`。  
-4. 解压后得到 `app-debug.apk`，安装到车机即可。
+## Build
+
+Open the project with Android Studio and build the `app` module.
+
+The repository also includes a GitHub Actions workflow:
+
+```text
+.github/workflows/build-debug-apk.yml
+```
+
+To build from GitHub:
+
+1. Open the repository on GitHub.
+2. Go to `Actions`.
+3. Run `Build Debug APK`.
+4. Download the generated APK artifact.
+
+## Runtime Requirements
+
+- Android head unit with root access.
+- `su` available to the app process.
+- EVS/AVM must be active before starting capture.
+- The target EVS process must expose readable DMA buffer descriptors through `/proc/<pid>/fd`.
+
+## Safety Notes
+
+This tool is intended for diagnostics on owned test devices only. It captures only a small number of frames and does not intentionally modify system files, kill processes, replace vendor binaries, or change vehicle configuration.
